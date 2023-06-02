@@ -70,7 +70,7 @@ func (t *_table[T]) UnsafeUpdate(ctx context.Context, trs []T, oldTrs []T, optBa
 		key := t.key(tr, keyBuffer[:0])
 
 		// serialize
-		data, err := serialize(&tr)
+		data, err := serialize(tr)
 		if err != nil {
 			return err
 		}

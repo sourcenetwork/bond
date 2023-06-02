@@ -400,7 +400,7 @@ func (t *_table[T]) Insert(ctx context.Context, trs []T, optBatch ...Batch) erro
 
 			// serialize
 			tr := trs[keyOrder[i]]
-			data, err := serialize(&tr)
+			data, err := serialize(tr)
 			if err != nil {
 				return err
 			}
@@ -524,7 +524,7 @@ func (t *_table[T]) Update(ctx context.Context, trs []T, optBatch ...Batch) erro
 			tr := trs[keyOrder[i]]
 
 			// serialize
-			data, err := serialize(&tr)
+			data, err := serialize(tr)
 			if err != nil {
 				return err
 			}
@@ -719,7 +719,7 @@ func (t *_table[T]) Upsert(ctx context.Context, trs []T, onConflict func(old, ne
 			}
 
 			// serialize
-			data, err := serialize(&tr)
+			data, err := serialize(tr)
 			if err != nil {
 				return err
 			}
