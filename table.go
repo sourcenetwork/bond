@@ -68,7 +68,7 @@ type TableReader[T any] interface {
 	PrimaryKey(builder KeyBuilder, tr T) []byte
 	PrimaryIndex() *Index[T]
 	SecondaryIndexes() []*Index[T]
-	Serializer() Serializer[*T]
+	Serializer() Serializer[T]
 
 	TableGetter[T]
 	TableExistChecker[T]
@@ -114,7 +114,7 @@ type TableOptions[T any] struct {
 	TableID             TableID
 	TableName           string
 	TablePrimaryKeyFunc TablePrimaryKeyFunc[T]
-	Serializer          Serializer[any]
+	Serializer          Serializer[T]
 
 	ScanPrefetchSize int
 
@@ -139,7 +139,7 @@ type _table[T any] struct {
 
 	scanPrefetchSize int
 
-	serializer *SerializerAnyWrapper[*T]
+	serializer Serializer[T]
 
 	filter Filter
 
@@ -147,9 +147,8 @@ type _table[T any] struct {
 }
 
 func NewTable[T any](opt TableOptions[T]) Table[T] {
-	var serializer = &SerializerAnyWrapper[*T]{Serializer: opt.DB.Serializer()}
-	if opt.Serializer != nil {
-		serializer = &SerializerAnyWrapper[*T]{Serializer: opt.Serializer}
+	if opt.Serializer == nil {
+		panic("shit")
 	}
 
 	scanPrefetchSize := DefaultScanPrefetchSize
@@ -175,7 +174,7 @@ func NewTable[T any](opt TableOptions[T]) Table[T] {
 		dataKeySpaceEnd:   []byte{byte(opt.TableID), 0x01, 0x00, 0x00, 0x00, 0x00},
 		valueEmpty:        utils.MakeNew[T](),
 		scanPrefetchSize:  scanPrefetchSize,
-		serializer:        serializer,
+		serializer:        opt.Serializer,
 		filter:            opt.Filter,
 		mutex:             sync.RWMutex{},
 	}
@@ -239,7 +238,7 @@ func (t *_table[T]) SecondaryIndexes() []*Index[T] {
 	return indexes
 }
 
-func (t *_table[T]) Serializer() Serializer[*T] {
+func (t *_table[T]) Serializer() Serializer[T] {
 	return t.serializer
 }
 
@@ -360,14 +359,14 @@ func (t *_table[T]) Insert(ctx context.Context, trs []T, optBatch ...Batch) erro
 
 	// value
 	value := t.db.getValueBufferPool().Get()[:0]
-	valueBuffer := bytes.NewBuffer(value)
+	// valueBuffer := bytes.NewBuffer(value)
 	defer t.db.getValueBufferPool().Put(value[:0])
 
 	// serializer
-	var serialize = t.serializer.Serializer.Serialize
-	if sw, ok := t.serializer.Serializer.(SerializerWithBuffer[any]); ok {
-		serialize = sw.SerializeFuncWithBuffer(valueBuffer)
-	}
+	var serialize = t.serializer.Serialize
+	// if sw, ok := t.serializer.Serializer.(SerializerWithBuffer[any]); ok {
+	// 	serialize = sw.SerializeFuncWithBuffer(valueBuffer)
+	// }
 
 	err := batched[T](trs, persistentBatchSize, func(trs []T) error {
 		// keys
@@ -471,14 +470,14 @@ func (t *_table[T]) Update(ctx context.Context, trs []T, optBatch ...Batch) erro
 
 	// value
 	value := t.db.getValueBufferPool().Get()[:0]
-	valueBuffer := bytes.NewBuffer(value)
+	// valueBuffer := bytes.NewBuffer(value)
 	defer t.db.getValueBufferPool().Put(value[:0])
 
 	// serializer
-	var serialize = t.serializer.Serializer.Serialize
-	if sw, ok := t.serializer.Serializer.(SerializerWithBuffer[any]); ok {
-		serialize = sw.SerializeFuncWithBuffer(valueBuffer)
-	}
+	var serialize = t.serializer.Serialize
+	// if sw, ok := t.serializer.Serializer.(SerializerWithBuffer[any]); ok {
+	// 	serialize = sw.SerializeFuncWithBuffer(valueBuffer)
+	// }
 
 	// reusable object
 	var oldTr T
@@ -653,14 +652,14 @@ func (t *_table[T]) Upsert(ctx context.Context, trs []T, onConflict func(old, ne
 
 	// value
 	value := t.db.getValueBufferPool().Get()[:0]
-	valueBuffer := bytes.NewBuffer(value)
+	// valueBuffer := bytes.NewBuffer(value)
 	defer t.db.getValueBufferPool().Put(value[:0])
 
 	// serializer
-	var serialize = t.serializer.Serializer.Serialize
-	if sw, ok := t.serializer.Serializer.(SerializerWithBuffer[any]); ok {
-		serialize = sw.SerializeFuncWithBuffer(valueBuffer)
-	}
+	var serialize = t.serializer.Serialize
+	// if sw, ok := t.serializer.Serializer.(SerializerWithBuffer[any]); ok {
+	// 	serialize = sw.SerializeFuncWithBuffer(valueBuffer)
+	// }
 
 	// reusable object
 	var oldTr T
@@ -874,7 +873,7 @@ func (t *_table[T]) Get(ctx context.Context, sel Selector[T], optBatch ...Batch)
 			t.reorderValues(values, order)
 			for _, value := range values {
 				if len(value) == 0 {
-					trs = append(trs, t.valueNil)
+					// trs = append(trs, t.valueNil)
 					continue
 				}
 

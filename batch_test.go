@@ -27,7 +27,7 @@ func Test_Batch_Callbacks(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, counter)
 
-	err = t1.Insert(context.Background(), []*TokenBalance{
+	err = t1.Insert(context.Background(), []TokenBalance{
 		{
 			ID:              0,
 			AccountID:       0,
@@ -52,9 +52,9 @@ func Test_Batch_ResetRetained(t *testing.T) {
 	defer func() { _ = batch.Close() }()
 
 	var count int
-	var inserts []*TokenBalance
+	var inserts []TokenBalance
 	for i := 0; i < 10000; i++ {
-		inserts = append(inserts, &TokenBalance{
+		inserts = append(inserts, TokenBalance{
 			ID:              uint64(count),
 			AccountID:       4,
 			ContractAddress: "0x122442131373712864321876413274623814238164214631",
@@ -83,7 +83,7 @@ func Test_Batch_ResetRetained(t *testing.T) {
 	err = batch.Commit(Sync)
 	require.NoError(t, err)
 
-	var tokenBalances []*TokenBalance
+	var tokenBalances []TokenBalance
 	err = t1.Scan(context.Background(), &tokenBalances, false)
 	require.NoError(t, err)
 	assert.Equal(t, inserts, tokenBalances)

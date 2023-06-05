@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-bond/bond/serializers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,17 +18,18 @@ func TestTableAnyScanner(t *testing.T) {
 	)
 
 	// create a table for TokenBalance
-	tokenBalanceTable := NewTable[*TokenBalance](TableOptions[*TokenBalance]{
+	tokenBalanceTable := NewTable[TokenBalance](TableOptions[TokenBalance]{
 		DB:        db,
 		TableID:   TokenBalanceTableID,
 		TableName: "token_balance",
-		TablePrimaryKeyFunc: func(builder KeyBuilder, tb *TokenBalance) []byte {
+		TablePrimaryKeyFunc: func(builder KeyBuilder, tb TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
+		Serializer: &serializers.JsonSerializer[TokenBalance]{},
 	})
 
 	// expected TokenBalances
-	tokenBalances := []*TokenBalance{
+	tokenBalances := []TokenBalance{
 		{
 			ID:              1,
 			AccountID:       1,
@@ -49,7 +51,7 @@ func TestTableAnyScanner(t *testing.T) {
 	require.NoError(t, err)
 
 	// create a any scanner for the table
-	anyScanner := TableAnyScanner[*TokenBalance](tokenBalanceTable)
+	anyScanner := TableAnyScanner[TokenBalance](tokenBalanceTable)
 
 	// scan all TokenBalances
 	var scannedAnyTokenBalances []any
@@ -59,6 +61,6 @@ func TestTableAnyScanner(t *testing.T) {
 
 	// assert that the scanned TokenBalances are the same as the expected TokenBalances
 	for i, scannedTokenBalance := range scannedAnyTokenBalances {
-		assert.Equal(t, tokenBalances[i], scannedTokenBalance.(*TokenBalance))
+		assert.Equal(t, tokenBalances[i], scannedTokenBalance.(TokenBalance))
 	}
 }

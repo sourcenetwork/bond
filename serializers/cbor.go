@@ -18,7 +18,7 @@ func (c *CBORSerializer) Serialize(i interface{}) ([]byte, error) {
 	return cbor.Marshal(i)
 }
 
-func (c *CBORSerializer) Deserialize(b []byte, i interface{}) error {
+func (c *CBORSerializer) Deserialize(b []byte, i *interface{}) error {
 	if c.DecMode != nil {
 		return c.DecMode.Unmarshal(b, i)
 	}

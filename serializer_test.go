@@ -13,7 +13,7 @@ import (
 )
 
 func TestMsgpackSerializer_SerializerWithClosable(t *testing.T) {
-	s := serializers.MsgpackSerializer{
+	s := serializers.MsgpackSerializer[TokenBalance]{
 		Encoder: &utils.SyncPoolWrapper[*msgpack.Encoder]{
 			Pool: sync.Pool{New: func() interface{} {
 				return msgpack.NewEncoder(nil)
@@ -29,7 +29,7 @@ func TestMsgpackSerializer_SerializerWithClosable(t *testing.T) {
 		},
 	}
 
-	tb := &TokenBalance{
+	tb := TokenBalance{
 		ID:              5,
 		AccountID:       3,
 		ContractAddress: "abc",
@@ -43,7 +43,7 @@ func TestMsgpackSerializer_SerializerWithClosable(t *testing.T) {
 	require.NotNil(t, buff)
 	require.NotNil(t, closeBuff)
 
-	var tb2 *TokenBalance
+	var tb2 TokenBalance
 	err = s.Deserialize(buff, &tb2)
 	require.NoError(t, err)
 

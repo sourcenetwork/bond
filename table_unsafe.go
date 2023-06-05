@@ -1,7 +1,6 @@
 package bond
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -47,14 +46,14 @@ func (t *_table[T]) UnsafeUpdate(ctx context.Context, trs []T, oldTrs []T, optBa
 
 	// value
 	value := t.db.getValueBufferPool().Get()[:0]
-	valueBuffer := bytes.NewBuffer(value)
+	// valueBuffer := bytes.NewBuffer(value)
 	defer t.db.getValueBufferPool().Put(value)
 
 	// serializer
-	var serialize = t.serializer.Serializer.Serialize
-	if sw, ok := t.serializer.Serializer.(SerializerWithBuffer[any]); ok {
-		serialize = sw.SerializeFuncWithBuffer(valueBuffer)
-	}
+	var serialize = t.serializer.Serialize
+	// if sw, ok := t.serializer.(SerializerWithBuffer[any]); ok {
+	// 	serialize = sw.SerializeFuncWithBuffer(valueBuffer)
+	// }
 
 	for i := 0; i < len(trs); i++ {
 		tr := trs[i]

@@ -7,13 +7,13 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type MsgpackSerializer struct {
+type MsgpackSerializer[T any] struct {
 	Encoder utils.SyncPool[*msgpack.Encoder]
 	Decoder utils.SyncPool[*msgpack.Decoder]
 	Buffer  utils.SyncPool[bytes.Buffer]
 }
 
-func (m *MsgpackSerializer) Serialize(i interface{}) ([]byte, error) {
+func (m *MsgpackSerializer[T]) Serialize(i T) ([]byte, error) {
 	if m.Encoder != nil {
 		var (
 			enc  = m.Encoder.Get()
@@ -34,7 +34,7 @@ func (m *MsgpackSerializer) Serialize(i interface{}) ([]byte, error) {
 	return msgpack.Marshal(i)
 }
 
-func (m *MsgpackSerializer) SerializerWithCloseable(i interface{}) ([]byte, func(), error) {
+func (m *MsgpackSerializer[T]) SerializerWithCloseable(i T) ([]byte, func(), error) {
 	if m.Encoder != nil {
 		var (
 			enc  = m.Encoder.Get()
@@ -61,11 +61,11 @@ func (m *MsgpackSerializer) SerializerWithCloseable(i interface{}) ([]byte, func
 	return b, func() {}, err
 }
 
-func (m *MsgpackSerializer) Deserialize(b []byte, i interface{}) error {
+func (m *MsgpackSerializer[T]) Deserialize(b []byte, i *T) error {
 	return msgpack.Unmarshal(b, i)
 }
 
-func (m *MsgpackSerializer) getBuffer() bytes.Buffer {
+func (m *MsgpackSerializer[T]) getBuffer() bytes.Buffer {
 	if m.Buffer != nil {
 		return m.Buffer.Get()
 	} else {
@@ -73,7 +73,7 @@ func (m *MsgpackSerializer) getBuffer() bytes.Buffer {
 	}
 }
 
-func (m *MsgpackSerializer) freeBuffer(buffer bytes.Buffer) {
+func (m *MsgpackSerializer[T]) freeBuffer(buffer bytes.Buffer) {
 	if m.Buffer != nil {
 		m.Buffer.Put(buffer)
 	}

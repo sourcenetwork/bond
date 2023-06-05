@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/cockroachdb/pebble"
-	"github.com/go-bond/bond/serializers"
 	"github.com/go-bond/bond/utils"
 )
 
@@ -80,7 +79,7 @@ type DB interface {
 	internalPools
 
 	Backend() *pebble.DB
-	Serializer() Serializer[any]
+	// Serializer() Serializer[any]
 
 	Getter
 	Setter
@@ -99,7 +98,7 @@ type DB interface {
 type _db struct {
 	pebble *pebble.DB
 
-	serializer Serializer[any]
+	// serializer Serializer[any]
 
 	keyBufferPool      *utils.PreAllocatedPool[[]byte]
 	multiKeyBufferPool *utils.PreAllocatedPool[[]byte]
@@ -125,16 +124,16 @@ func Open(dirname string, opts *Options) (DB, error) {
 		return nil, err
 	}
 
-	var serializer Serializer[any]
-	if opts.Serializer != nil {
-		serializer = opts.Serializer
-	} else {
-		serializer = &serializers.JsonSerializer{}
-	}
+	// var serializer Serializer[any]
+	// if opts.Serializer != nil {
+	// 	serializer = opts.Serializer
+	// } else {
+	// 	serializer = &serializers.JsonSerializer{}
+	// }
 
 	db := &_db{
-		pebble:     pdb,
-		serializer: serializer,
+		pebble: pdb,
+		// serializer: serializer,
 		keyBufferPool: utils.NewPreAllocatedPool[[]byte](func() any {
 			return make([]byte, 0, DefaultKeyBufferSize)
 		}, DefaultNumberOfPreAllocKeyBuffers),
@@ -164,9 +163,9 @@ func (db *_db) Backend() *pebble.DB {
 	return db.pebble
 }
 
-func (db *_db) Serializer() Serializer[any] {
-	return db.serializer
-}
+// func (db *_db) Serializer() Serializer[any] {
+// 	return db.serializer
+// }
 
 func (db *_db) Get(key []byte, batch ...Batch) (data []byte, closer io.Closer, err error) {
 	if batch != nil && len(batch) > 0 && batch[0] != nil {

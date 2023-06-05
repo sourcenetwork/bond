@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/cockroachdb/pebble"
+	"github.com/go-bond/bond/serializers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,16 +18,17 @@ func TestBondTable_UnsafeUpdate(t *testing.T) {
 		TokenBalanceTableID = TableID(1)
 	)
 
-	tokenBalanceTable := NewTable[*TokenBalance](TableOptions[*TokenBalance]{
+	tokenBalanceTable := NewTable[TokenBalance](TableOptions[TokenBalance]{
 		DB:        db,
 		TableID:   TokenBalanceTableID,
 		TableName: "token_balance",
-		TablePrimaryKeyFunc: func(builder KeyBuilder, tb *TokenBalance) []byte {
+		TablePrimaryKeyFunc: func(builder KeyBuilder, tb TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
+		Serializer: &serializers.JsonSerializer[TokenBalance]{},
 	})
 
-	tokenBalanceAccount := &TokenBalance{
+	tokenBalanceAccount := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -34,7 +36,7 @@ func TestBondTable_UnsafeUpdate(t *testing.T) {
 		Balance:         5,
 	}
 
-	tokenBalanceAccountUpdated := &TokenBalance{
+	tokenBalanceAccountUpdated := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -42,7 +44,7 @@ func TestBondTable_UnsafeUpdate(t *testing.T) {
 		Balance:         7,
 	}
 
-	err := tokenBalanceTable.Insert(context.Background(), []*TokenBalance{tokenBalanceAccount})
+	err := tokenBalanceTable.Insert(context.Background(), []TokenBalance{tokenBalanceAccount})
 	require.NoError(t, err)
 
 	it := db.Backend().NewIter(&pebble.IterOptions{
@@ -54,20 +56,20 @@ func TestBondTable_UnsafeUpdate(t *testing.T) {
 		rawData := it.Value()
 
 		var tokenBalanceAccount1FromDB TokenBalance
-		err = db.Serializer().Deserialize(rawData, &tokenBalanceAccount1FromDB)
+		err = tokenBalanceTable.Serializer().Deserialize(rawData, &tokenBalanceAccount1FromDB)
 		require.NoError(t, err)
-		assert.Equal(t, tokenBalanceAccount, &tokenBalanceAccount1FromDB)
+		assert.Equal(t, tokenBalanceAccount, tokenBalanceAccount1FromDB)
 	}
 
 	_ = it.Close()
 
-	tableUnsafeUpdater, ok := tokenBalanceTable.(TableUnsafeUpdater[*TokenBalance])
+	tableUnsafeUpdater, ok := tokenBalanceTable.(TableUnsafeUpdater[TokenBalance])
 	require.True(t, ok)
 
 	err = tableUnsafeUpdater.UnsafeUpdate(
 		context.Background(),
-		[]*TokenBalance{tokenBalanceAccountUpdated},
-		[]*TokenBalance{tokenBalanceAccount},
+		[]TokenBalance{tokenBalanceAccountUpdated},
+		[]TokenBalance{tokenBalanceAccount},
 	)
 	require.NoError(t, err)
 
@@ -80,9 +82,9 @@ func TestBondTable_UnsafeUpdate(t *testing.T) {
 		rawData := it.Value()
 
 		var tokenBalanceAccount1FromDB TokenBalance
-		err = db.Serializer().Deserialize(rawData, &tokenBalanceAccount1FromDB)
+		err = tokenBalanceTable.Serializer().Deserialize(rawData, &tokenBalanceAccount1FromDB)
 		require.NoError(t, err)
-		assert.Equal(t, tokenBalanceAccountUpdated, &tokenBalanceAccount1FromDB)
+		assert.Equal(t, tokenBalanceAccountUpdated, tokenBalanceAccount1FromDB)
 	}
 
 	_ = it.Close()

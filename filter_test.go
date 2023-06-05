@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-bond/bond/serializers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -52,17 +53,18 @@ func TestFilter_Insert(t *testing.T) {
 		TokenBalanceTableID = TableID(1)
 	)
 
-	tokenBalanceTable := NewTable[*TokenBalance](TableOptions[*TokenBalance]{
+	tokenBalanceTable := NewTable[TokenBalance](TableOptions[TokenBalance]{
 		DB:        db,
 		TableID:   TokenBalanceTableID,
 		TableName: "token_balance",
-		TablePrimaryKeyFunc: func(builder KeyBuilder, tb *TokenBalance) []byte {
+		TablePrimaryKeyFunc: func(builder KeyBuilder, tb TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
-		Filter: mFilter,
+		Filter:     mFilter,
+		Serializer: &serializers.JsonSerializer[TokenBalance]{},
 	})
 
-	tokenBalanceAccount := &TokenBalance{
+	tokenBalanceAccount := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -73,12 +75,12 @@ func TestFilter_Insert(t *testing.T) {
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(false).Once()
 	mFilter.On("Add", mock.Anything, mock.Anything).Return().Once()
 
-	err := tokenBalanceTable.Insert(context.Background(), []*TokenBalance{tokenBalanceAccount})
+	err := tokenBalanceTable.Insert(context.Background(), []TokenBalance{tokenBalanceAccount})
 	require.NoError(t, err)
 
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(true).Once()
 
-	err = tokenBalanceTable.Insert(context.Background(), []*TokenBalance{tokenBalanceAccount})
+	err = tokenBalanceTable.Insert(context.Background(), []TokenBalance{tokenBalanceAccount})
 	require.Error(t, err)
 
 	mFilter.AssertExpectations(t)
@@ -96,17 +98,18 @@ func TestFilter_Insert_Batch(t *testing.T) {
 		TokenBalanceTableID = TableID(1)
 	)
 
-	tokenBalanceTable := NewTable[*TokenBalance](TableOptions[*TokenBalance]{
+	tokenBalanceTable := NewTable[TokenBalance](TableOptions[TokenBalance]{
 		DB:        db,
 		TableID:   TokenBalanceTableID,
 		TableName: "token_balance",
-		TablePrimaryKeyFunc: func(builder KeyBuilder, tb *TokenBalance) []byte {
+		TablePrimaryKeyFunc: func(builder KeyBuilder, tb TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
-		Filter: mFilter,
+		Filter:     mFilter,
+		Serializer: &serializers.JsonSerializer[TokenBalance]{},
 	})
 
-	tokenBalanceAccount := &TokenBalance{
+	tokenBalanceAccount := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -119,12 +122,12 @@ func TestFilter_Insert_Batch(t *testing.T) {
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(false).Once()
 	mFilter.On("Add", mock.Anything, mock.Anything).Return().Once()
 
-	err := tokenBalanceTable.Insert(context.Background(), []*TokenBalance{tokenBalanceAccount}, batch)
+	err := tokenBalanceTable.Insert(context.Background(), []TokenBalance{tokenBalanceAccount}, batch)
 	require.NoError(t, err)
 
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(true).Once()
 
-	err = tokenBalanceTable.Insert(context.Background(), []*TokenBalance{tokenBalanceAccount}, batch)
+	err = tokenBalanceTable.Insert(context.Background(), []TokenBalance{tokenBalanceAccount}, batch)
 	require.Error(t, err)
 
 	err = batch.Commit(Sync)
@@ -147,17 +150,18 @@ func TestFilter_Exist(t *testing.T) {
 		TokenBalanceTableID = TableID(1)
 	)
 
-	tokenBalanceTable := NewTable[*TokenBalance](TableOptions[*TokenBalance]{
+	tokenBalanceTable := NewTable[TokenBalance](TableOptions[TokenBalance]{
 		DB:        db,
 		TableID:   TokenBalanceTableID,
 		TableName: "token_balance",
-		TablePrimaryKeyFunc: func(builder KeyBuilder, tb *TokenBalance) []byte {
+		TablePrimaryKeyFunc: func(builder KeyBuilder, tb TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
-		Filter: mFilter,
+		Filter:     mFilter,
+		Serializer: &serializers.JsonSerializer[TokenBalance]{},
 	})
 
-	tokenBalanceAccount := &TokenBalance{
+	tokenBalanceAccount := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -170,7 +174,7 @@ func TestFilter_Exist(t *testing.T) {
 
 	require.False(t, tokenBalanceTable.Exist(tokenBalanceAccount))
 
-	err := tokenBalanceTable.Insert(context.Background(), []*TokenBalance{tokenBalanceAccount})
+	err := tokenBalanceTable.Insert(context.Background(), []TokenBalance{tokenBalanceAccount})
 	require.NoError(t, err)
 
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(true).Once()
@@ -192,17 +196,18 @@ func TestFilter_Upsert(t *testing.T) {
 		TokenBalanceTableID = TableID(1)
 	)
 
-	tokenBalanceTable := NewTable[*TokenBalance](TableOptions[*TokenBalance]{
+	tokenBalanceTable := NewTable[TokenBalance](TableOptions[TokenBalance]{
 		DB:        db,
 		TableID:   TokenBalanceTableID,
 		TableName: "token_balance",
-		TablePrimaryKeyFunc: func(builder KeyBuilder, tb *TokenBalance) []byte {
+		TablePrimaryKeyFunc: func(builder KeyBuilder, tb TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
-		Filter: mFilter,
+		Filter:     mFilter,
+		Serializer: &serializers.JsonSerializer[TokenBalance]{},
 	})
 
-	tokenBalanceAccount := &TokenBalance{
+	tokenBalanceAccount := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -210,7 +215,7 @@ func TestFilter_Upsert(t *testing.T) {
 		Balance:         5,
 	}
 
-	tokenBalanceAccountUpdated := &TokenBalance{
+	tokenBalanceAccountUpdated := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -221,12 +226,12 @@ func TestFilter_Upsert(t *testing.T) {
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(false).Once()
 	mFilter.On("Add", mock.Anything, mock.Anything).Return().Once()
 
-	err := tokenBalanceTable.Upsert(context.Background(), []*TokenBalance{tokenBalanceAccount}, TableUpsertOnConflictReplace[*TokenBalance])
+	err := tokenBalanceTable.Upsert(context.Background(), []TokenBalance{tokenBalanceAccount}, TableUpsertOnConflictReplace[TokenBalance])
 	require.NoError(t, err)
 
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(true).Once()
 
-	err = tokenBalanceTable.Upsert(context.Background(), []*TokenBalance{tokenBalanceAccountUpdated}, TableUpsertOnConflictReplace[*TokenBalance])
+	err = tokenBalanceTable.Upsert(context.Background(), []TokenBalance{tokenBalanceAccountUpdated}, TableUpsertOnConflictReplace[TokenBalance])
 	require.NoError(t, err)
 
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(true).Once()
@@ -250,17 +255,18 @@ func TestFilter_Get(t *testing.T) {
 		TokenBalanceTableID = TableID(1)
 	)
 
-	tokenBalanceTable := NewTable[*TokenBalance](TableOptions[*TokenBalance]{
+	tokenBalanceTable := NewTable[TokenBalance](TableOptions[TokenBalance]{
 		DB:        db,
 		TableID:   TokenBalanceTableID,
 		TableName: "token_balance",
-		TablePrimaryKeyFunc: func(builder KeyBuilder, tb *TokenBalance) []byte {
+		TablePrimaryKeyFunc: func(builder KeyBuilder, tb TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
-		Filter: mFilter,
+		Filter:     mFilter,
+		Serializer: &serializers.JsonSerializer[TokenBalance]{},
 	})
 
-	tokenBalanceAccount := &TokenBalance{
+	tokenBalanceAccount := TokenBalance{
 		ID:              1,
 		AccountID:       1,
 		ContractAddress: "0xtestContract",
@@ -276,7 +282,7 @@ func TestFilter_Get(t *testing.T) {
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(false).Once()
 	mFilter.On("Add", mock.Anything, mock.Anything).Return().Once()
 
-	err = tokenBalanceTable.Insert(context.Background(), []*TokenBalance{tokenBalanceAccount})
+	err = tokenBalanceTable.Insert(context.Background(), []TokenBalance{tokenBalanceAccount})
 	require.NoError(t, err)
 
 	mFilter.On("MayContain", mock.Anything, mock.Anything).Return(true).Once()
