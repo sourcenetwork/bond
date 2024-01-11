@@ -106,7 +106,7 @@ func (b *_batch) DeleteRange(start []byte, end []byte, opt WriteOptions, _ ...Ba
 	return b.Batch.DeleteRange(start, end, pebbleWriteOptions(opt))
 }
 
-func (b *_batch) Iter(opt *IterOptions, _ ...Batch) Iterator {
+func (b *_batch) Iter(opt *IterOptions, _ ...Batch) (Iterator, error) {
 	return newIterator(b.Batch, opt)
 }
 

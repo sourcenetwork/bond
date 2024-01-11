@@ -173,7 +173,7 @@ func (idx *Index[T]) Name() string {
 }
 
 // Iter returns an iterator for the index.
-func (idx *Index[T]) Iter(table Table[T], selector Selector[T], optBatch ...Batch) Iterator {
+func (idx *Index[T]) Iter(table Table[T], selector Selector[T], optBatch ...Batch) (Iterator, error) {
 	var iterConstructor Iterationer = table.DB()
 	if len(optBatch) > 0 {
 		iterConstructor = optBatch[0]
@@ -273,7 +273,7 @@ func (idx *Index[T]) Iter(table Table[T], selector Selector[T], optBatch ...Batc
 
 		return newIteratorMulti(iterConstructor, pebbleOpts)
 	default:
-		return errIterator{err: fmt.Errorf("unknown selector type: %v", selector.Type())}
+		return errIterator{err: fmt.Errorf("unknown selector type: %v", selector.Type())}, fmt.Errorf("unknown selector type: %v", selector.Type())
 	}
 }
 
@@ -356,7 +356,10 @@ func (idx *Index[T]) Intersect(ctx context.Context, table Table[T], sel Selector
 	tempKeysMap := map[string]struct{}{}
 	intersectKeysMap := map[string]struct{}{}
 
-	it := idx.Iter(table, sel, optBatch...)
+	it, err := idx.Iter(table, sel, optBatch...)
+	if err != nil {
+		return nil, err
+	}
 	for it.First(); it.Valid(); it.Next() {
 		select {
 		case <-ctx.Done():
@@ -370,7 +373,10 @@ func (idx *Index[T]) Intersect(ctx context.Context, table Table[T], sel Selector
 	_ = it.Close()
 
 	for i, idx2 := range indexes {
-		it = idx2.Iter(table, sels[i], optBatch...)
+		it, err = idx2.Iter(table, sels[i], optBatch...)
+		if err != nil {
+			return nil, err
+		}
 		for it.First(); it.Valid(); it.Next() {
 			select {
 			case <-ctx.Done():

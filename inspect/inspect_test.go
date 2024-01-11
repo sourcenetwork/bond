@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-bond/bond"
+	"github.com/go-bond/bond/serializers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +51,7 @@ func setupDatabaseForQuery() (bond.DB, bond.Table[*TokenBalance], *bond.Index[*T
 		TablePrimaryKeyFunc: func(builder bond.KeyBuilder, tb *TokenBalance) []byte {
 			return builder.AddUint64Field(tb.ID).Bytes()
 		},
+		Serializer: &serializers.JsonSerializer[*TokenBalance]{},
 	})
 
 	const (

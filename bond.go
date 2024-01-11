@@ -46,7 +46,7 @@ type Batcher interface {
 }
 
 type Iterationer interface {
-	Iter(opt *IterOptions, batch ...Batch) Iterator
+	Iter(opt *IterOptions, batch ...Batch) (Iterator, error)
 }
 
 type Applier interface {
@@ -200,7 +200,7 @@ func (db *_db) DeleteRange(start []byte, end []byte, opt WriteOptions, batch ...
 	}
 }
 
-func (db *_db) Iter(opt *IterOptions, batch ...Batch) Iterator {
+func (db *_db) Iter(opt *IterOptions, batch ...Batch) (Iterator, error) {
 	if batch != nil && len(batch) > 0 && batch[0] != nil {
 		return batch[0].Iter(opt)
 	} else {

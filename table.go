@@ -58,7 +58,7 @@ type TableScanner[T any] interface {
 }
 
 type TableIterationer[T any] interface {
-	Iter(sel Selector[T], optBatch ...Batch) Iterator
+	Iter(sel Selector[T], optBatch ...Batch) (Iterator, error)
 }
 
 type TableReader[T any] interface {
@@ -148,7 +148,7 @@ type _table[T any] struct {
 
 func NewTable[T any](opt TableOptions[T]) Table[T] {
 	if opt.Serializer == nil {
-		panic("shit")
+		panic("no serializer defined")
 	}
 
 	scanPrefetchSize := DefaultScanPrefetchSize
@@ -272,12 +272,15 @@ func (t *_table[T]) reindex(idxs []*Index[T]) error {
 	prefix := keyPrefix(t.id, t.primaryIndex, t.valueEmpty, prefixBuffer[:0])
 	prefixSuccessor := keySuccessor(prefix, prefixSuccessorBuffer[:0])
 
-	iter := t.db.Iter(&IterOptions{
+	iter, err := t.db.Iter(&IterOptions{
 		IterOptions: pebble.IterOptions{
 			LowerBound: prefix,
 			UpperBound: prefixSuccessor,
 		},
 	})
+	if err != nil {
+		return err
+	}
 
 	batch := t.db.Batch()
 	defer func() {
@@ -318,7 +321,7 @@ func (t *_table[T]) reindex(idxs []*Index[T]) error {
 		}
 	}
 
-	err := batch.Commit(Sync)
+	err = batch.Commit(Sync)
 	if err != nil {
 		return fmt.Errorf("failed to commit reindex batch: %w", err)
 	}
@@ -376,12 +379,15 @@ func (t *_table[T]) Insert(ctx context.Context, trs []T, optBatch ...Batch) erro
 		keyOrder := t.sortKeys(keys)
 
 		// iter
-		iter := t.db.Iter(&IterOptions{
+		iter, err := t.db.Iter(&IterOptions{
 			IterOptions: pebble.IterOptions{
 				LowerBound: keys[0],
 				UpperBound: t.dataKeySpaceEnd,
 			},
 		}, batch)
+		if err != nil {
+
+		}
 		defer iter.Close()
 
 		// process rows
@@ -490,12 +496,15 @@ func (t *_table[T]) Update(ctx context.Context, trs []T, optBatch ...Batch) erro
 		keyOrder := t.sortKeys(keys)
 
 		// iter
-		iter := t.db.Iter(&IterOptions{
+		iter, err := t.db.Iter(&IterOptions{
 			IterOptions: pebble.IterOptions{
 				LowerBound: keys[0],
 				UpperBound: t.dataKeySpaceEnd,
 			},
 		}, batch)
+		if err != nil {
+			return err
+		}
 		defer iter.Close()
 
 		for i, key := range keys {
@@ -672,12 +681,15 @@ func (t *_table[T]) Upsert(ctx context.Context, trs []T, onConflict func(old, ne
 		keyOrder := t.sortKeys(keys)
 
 		// iter
-		iter := t.db.Iter(&IterOptions{
+		iter, err := t.db.Iter(&IterOptions{
 			IterOptions: pebble.IterOptions{
 				LowerBound: keys[0],
 				UpperBound: t.dataKeySpaceEnd,
 			},
 		}, batch)
+		if err != nil {
+			return err
+		}
 		defer iter.Close()
 
 		for i := 0; i < len(keys); {
@@ -803,12 +815,16 @@ func (t *_table[T]) exist(key []byte, batch Batch, iter Iterator) bool {
 	}
 
 	if iter == nil {
-		iter = t.db.Iter(&IterOptions{
+		var err error
+		iter, err = t.db.Iter(&IterOptions{
 			IterOptions: pebble.IterOptions{
 				LowerBound: key,
 				UpperBound: t.dataKeySpaceEnd,
 			},
 		}, batch)
+		if err != nil {
+			return false
+		}
 		defer iter.Close()
 	}
 
@@ -915,12 +931,15 @@ func (t *_table[T]) get(keys [][]byte, batch Batch, values [][]byte, errorOnNotE
 	// sort keys so we get data from db efficiently
 	originalOrder := t.sortKeys(keys)
 
-	iter := t.db.Iter(&IterOptions{
+	iter, err := t.db.Iter(&IterOptions{
 		IterOptions: pebble.IterOptions{
 			LowerBound: keys[0],
 			UpperBound: t.dataKeySpaceEnd,
 		},
 	}, batch)
+	if err != nil {
+		return nil, err
+	}
 	defer iter.Close()
 
 	for i := 0; i < len(keys); i++ {
@@ -949,7 +968,7 @@ func (t *_table[T]) get(keys [][]byte, batch Batch, values [][]byte, errorOnNotE
 	return values, nil
 }
 
-func (t *_table[T]) Iter(sel Selector[T], optBatch ...Batch) Iterator {
+func (t *_table[T]) Iter(sel Selector[T], optBatch ...Batch) (Iterator, error) {
 	return t.primaryIndex.Iter(t, sel, optBatch...)
 }
 
@@ -985,7 +1004,10 @@ func (t *_table[T]) ScanIndexForEach(ctx context.Context, idx *Index[T], s Selec
 }
 
 func (t *_table[T]) scanForEachPrimaryIndex(ctx context.Context, idx *Index[T], s Selector[T], f func(keyBytes KeyBytes, t Lazy[T]) (bool, error), reverse bool, optBatch ...Batch) error {
-	it := idx.Iter(t, s, optBatch...)
+	it, err := idx.Iter(t, s, optBatch...)
+	if err != nil {
+		return err
+	}
 
 	first := func() bool {
 		if reverse {
@@ -1031,7 +1053,10 @@ func (t *_table[T]) scanForEachPrimaryIndex(ctx context.Context, idx *Index[T], 
 }
 
 func (t *_table[T]) scanForEachSecondaryIndex(ctx context.Context, idx *Index[T], s Selector[T], f func(keyBytes KeyBytes, t Lazy[T]) (bool, error), reverse bool, optBatch ...Batch) error {
-	it := idx.Iter(t, s, optBatch...)
+	it, err := idx.Iter(t, s, optBatch...)
+	if err != nil {
+		return err
+	}
 
 	first := func() bool {
 		if reverse {

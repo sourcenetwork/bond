@@ -58,7 +58,7 @@ func (m *MockBatch) DeleteRange(start []byte, end []byte, opt WriteOptions, batc
 	panic("implement me")
 }
 
-func (m *MockBatch) Iter(opt *IterOptions, batch ...Batch) Iterator {
+func (m *MockBatch) Iter(opt *IterOptions, batch ...Batch) (Iterator, error) {
 	//TODO implement me
 	panic("implement me")
 }

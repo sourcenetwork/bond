@@ -29,7 +29,7 @@ type Iterator interface {
 }
 
 type _iterConstructor interface {
-	NewIter(opts *pebble.IterOptions) *pebble.Iterator
+	NewIter(opts *pebble.IterOptions) (*pebble.Iterator, error)
 }
 
 type _iterator struct {
@@ -38,8 +38,12 @@ type _iterator struct {
 	opts *IterOptions
 }
 
-func newIterator(itc _iterConstructor, opts *IterOptions) *_iterator {
-	return &_iterator{Iterator: itc.NewIter(&opts.IterOptions), opts: opts}
+func newIterator(itc _iterConstructor, opts *IterOptions) (*_iterator, error) {
+	it, err := itc.NewIter(&opts.IterOptions)
+	if err != nil {
+		return nil, err
+	}
+	return &_iterator{Iterator: it, opts: opts}, nil
 }
 
 func (it *_iterator) Close() error {
@@ -61,21 +65,28 @@ type _iteratorMulti struct {
 	iterator           Iterator
 }
 
-func newIteratorMulti(itc Iterationer, opts []*IterOptions) *_iteratorMulti {
+func newIteratorMulti(itc Iterationer, opts []*IterOptions) (*_iteratorMulti, error) {
+	it, err := itc.Iter(childIteratorOptions(opts[0]))
+	if err != nil {
+		return nil, err
+	}
 	return &_iteratorMulti{
 		iteratorOptions:      opts,
 		iteratorOptionsIndex: 0,
 		iteratorConstuctor:   itc,
-		iterator:             itc.Iter(childIteratorOptions(opts[0])),
-	}
+		iterator:             it,
+	}, nil
 }
 
 func (it *_iteratorMulti) First() bool {
 	if it.iteratorOptionsIndex != 0 {
 		_ = it.iterator.Close()
-
+		var err error
 		it.iteratorOptionsIndex = 0
-		it.iterator = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		it.iterator, err = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		if err != nil {
+			return false
+		}
 	}
 	return it.iterator.First()
 }
@@ -83,9 +94,12 @@ func (it *_iteratorMulti) First() bool {
 func (it *_iteratorMulti) Last() bool {
 	if it.iteratorOptionsIndex != len(it.iteratorOptions)-1 {
 		_ = it.iterator.Close()
-
+		var err error
 		it.iteratorOptionsIndex = len(it.iteratorOptions) - 1
-		it.iterator = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		it.iterator, err = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		if err != nil {
+			return false
+		}
 	}
 	return it.iterator.Last()
 }
@@ -97,9 +111,12 @@ func (it *_iteratorMulti) Prev() bool {
 		}
 
 		_ = it.iterator.Close()
-
+		var err error
 		it.iteratorOptionsIndex--
-		it.iterator = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		it.iterator, err = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		if err != nil {
+			return false
+		}
 		return it.iterator.Last()
 	}
 	return true
@@ -112,9 +129,12 @@ func (it *_iteratorMulti) Next() bool {
 		}
 
 		_ = it.iterator.Close()
-
+		var err error
 		it.iteratorOptionsIndex++
-		it.iterator = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		it.iterator, err = it.iteratorConstuctor.Iter(childIteratorOptions(it.iteratorOptions[it.iteratorOptionsIndex]))
+		if err != nil {
+			return false
+		}
 		return it.iterator.First()
 	}
 	return true
